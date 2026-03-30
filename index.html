@@ -3,6 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat Client‑Side</title>
+<style>
+  body { margin:0; font-family:Arial,sans-serif; background:#f4f6fa; }
+  #container { max-width:720px; margin:auto; height:100vh; display:flex; flex-direction:column; }
+  #messages { flex:1; padding:1em; overflow:auto; display:flex; flex-direction:column; gap:0.8em; }
+  .msg { padding:0.8em 1em; border-radius:12px; max-width:75%; word-break:break-word;}
+  .user { align-self:flex-end; background:#4b6cb7; color:white; }
+  .bot  { align-self:flex-start; background:#ebebeb; color:#222; }
+  #input { display:flex; border-top:1px solid #ccc; }
+  #prompt { flex:1; padding:1em; border:none; outline:none; font-size:1em; }
+  #send { padding:1em; background:#4b6cb7; color:white; border:none; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="messages"></div>
+  <div id="input">
+    <input id="prompt" placeholder="Scrivi qui..." />
+    <button id="send">Invia</button>
+  </div>
+</div>
+
+<script type="module">
+  import WebLLM from './webllm.js'; // carica WebLLM runtime
+
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('prompt');
+
+  let model;
+
+  async function initModel() {
+    // carica il modello dal repo: metti qui il percorso GitHub Pages
+    model = await WebLLM.loadModel('/models/my‑tiny‑model.bin');
+  }
+  initModel();
+
+  document.getElementById('send').onclick = async () => {
+    const prompt = inputEl.value.trim();
+    if (!prompt) return;
+
+    addMessage('user', prompt);
+    inputEl.value = '';
+
+    const output = await model.generate(prompt, {
+      maxTokens: 200,
+      temperature: 0.7
+    });
+
+    addMessage('bot', output);
+  };
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Chat Client-Side</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>

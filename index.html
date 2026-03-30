@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat Client-Side</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #f5f6fa; margin:0; display:flex; justify-content:center; align-items:flex-start; height:100vh; }
+  #app { width: 100%; max-width: 720px; margin-top: 20px; display:flex; flex-direction:column; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.1); background:white; }
+  header { background:#4b6cb7; color:white; padding:1em; font-size:1.2em; font-weight:600; text-align:center; }
+  #chat { flex:1; padding:1em; overflow-y:auto; min-height:400px; max-height:60vh; background:#e6e9f0; }
+  .message { margin:0.5em 0; padding:0.6em 1em; border-radius:12px; max-width:80%; word-wrap:break-word; }
+  .user { background:#4b6cb7; color:white; margin-left:auto; text-align:right; }
+  .bot { background:#f1f2f6; color:#222; margin-right:auto; }
+  #inputArea { display:flex; border-top:1px solid #ccc; }
+  #prompt { flex:1; border:none; padding:1em; font-size:1em; outline:none; }
+  button { border:none; background:#4b6cb7; color:white; padding:1em; cursor:pointer; font-weight:600; transition:0.2s; }
+  button:hover { background:#3a539b; }
+  #tools { display:flex; justify-content:space-around; padding:0.5em; background:#f0f0f0; }
+  #tools button { flex:1; margin:0 0.3em; font-size:0.9em; padding:0.7em; }
+  canvas { max-width:100%; border-radius:8px; margin-top:0.5em; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>AI Chat Client-Side</header>
+  <div id="chat"></div>
+  <div id="tools">
+    <button onclick="generateCode()">Genera Codice</button>
+    <button onclick="generateImage()">Genera Immagine</button>
+  </div>
+  <div id="inputArea">
+    <input id="prompt" placeholder="Scrivi qui..." />
+    <button onclick="sendPrompt()">Invia</button>
+  </div>
+</div>
+
+<script type="module">
+// ======== CHAT AI CLIENT-SIDE ========
+import { GPT4All } from 'https://cdn.jsdelivr.net/npm/gpt4all-js/dist/gpt4all.min.js';
+
+// Carica modello leggero WASM
+const gpt = await GPT4All.load('gpt4all-lora-quantized'); // modello leggero client-side
+
+const chatDiv = document.getElementById('chat');
+
+async function sendPrompt() {
+  const prompt = document.getElementById('prompt').value.trim();
+  if(!prompt) return;
+  appendMessage('user', prompt);
+  document.getElementById('prompt').value = '';
+
+  const response = await gpt.generate(prompt);
+  appendMessage('bot', response);
+}
+
+function appendMessage(sender, text) {
+  const div = document.createElement('div');
+  div.className = 'message ' + sender;
+  div.textContent = text;
+  chatDiv.appendChild(div);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+// ======== GENERAZIONE CODICE + DOWNLOAD ========
+function generateCode() {
+  const codePrompt = "Scrivi un esempio di codice Python che stampi 'Ciao Mondo'";
+  gpt.generate(codePrompt).then(code => {
+    appendMessage('bot', code);
+
+    const blob = new Blob([code], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'codice.py';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+// ======== GENERAZIONE IMMAGINE CLIENT-SIDE (WASM) ========
+async function generateImage() {
+  appendMessage('bot', 'Generazione immagine in corso...');
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  chatDiv.appendChild(canvas);
+
+  // libreria WASM Stable Diffusion leggera
+  import('https://cdn.jsdelivr.net/npm/@huggingface/stable-diffusion-wasm/dist/stable-diffusion-wasm.min.js')
+  .then(async mod => {
+    const sd = await mod.create();
+    await sd.loadModel(); // modello leggero
+    const imageData = await sd.generate({
+      prompt: "Un paesaggio futuristico in stile cyberpunk, colori neon",
+      width:512,
+      height:512
+    });
+    const ctx = canvas.getContext('2d');
+    ctx.putImageData(imageData, 0, 0);
+  });
+}
+
+</script>
+</body>
+</html>

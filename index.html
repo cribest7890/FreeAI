@@ -71,7 +71,7 @@
             <div class="logo-mark">AI</div>
             <div>
                 <div style="font-weight:bold; font-size:0.9rem">FreeAI</div>
-                <div style="font-size:0.7rem; color:var(--text-muted)">by cribest7890 | Gemma-2B</div>
+                <div style="font-size:0.7rem; color:var(--text-muted)">by cribest7890 | Phi-3 Mini</div>
             </div>
         </div>
         <div id="status-badge">
@@ -81,12 +81,12 @@
     </div>
 
     <div id="progress-wrap">
-        <div id="progress-label" style="font-size:0.7rem; font-family:var(--font-mono)">Caricamento AI locale (Gemma-2B)...</div>
+        <div id="progress-label" style="font-size:0.7rem; font-family:var(--font-mono)">Caricamento AI locale (Ottimizzata per HP)...</div>
         <div id="progress-bar-outer"><div id="progress-bar-inner"></div></div>
     </div>
 
     <div id="chat">
-        <div class="bubble ai">Benvenuto su <b>freeAI.github.io</b>. Sto scaricando l'intelligenza artificiale locale sviluppata da Ollama e cribest7890 sul tuo browser. Attendi...</div>
+        <div class="bubble ai">Ciao! Sto scaricando l'AI su <b>freeAI.github.io</b>. Su questo PC HP potrebbe volerci un minuto per iniziare il download.</div>
     </div>
 
     <div id="input-area">
@@ -100,8 +100,8 @@
 <script type="module">
     import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-    // Modello scelto: Gemma-2B (Google), ottimo per l'italiano e sintetico
-    const selectedModel = "gemma-2b-it-q4f16_1-MLC";
+    // Modello Phi-3 Mini: perfetto per schede Intel HD 620 su Ubuntu
+    const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC";
     
     let engine;
     const chatContainer = document.getElementById("chat");
@@ -117,13 +117,17 @@
             statusBadge.classList.add("loading");
             progressWrap.classList.add("visible");
 
-            engine = await webllm.CreateMLCEngine(selectedModel, {
+            // Configurazione specifica per superare lo stallo dello 0%
+            const engineConfig = {
                 initProgressCallback: (report) => {
                     const progress = Math.round(report.progress * 100);
                     progressBar.style.width = progress + "%";
                     statusText.innerText = `Download: ${progress}%`;
-                }
-            });
+                },
+                appConfig: { cacheBackend: "indexeddb" } // IndexedDB è più stabile su Linux
+            };
+
+            engine = await webllm.CreateMLCEngine(selectedModel, engineConfig);
 
             statusBadge.classList.replace("loading", "ready");
             statusText.innerText = "Online";
@@ -134,7 +138,7 @@
 
         } catch (err) {
             statusText.innerText = "Errore GPU";
-            appendMessage("ai", "ERRORE: WebGPU non supportata. Su Ubuntu usa Chrome con --enable-unsafe-webgpu");
+            appendMessage("ai", "Errore WebGPU. Assicurati di aver lanciato Chromium da terminale con le flag corrette.");
             console.error(err);
         }
     }
@@ -150,7 +154,7 @@
 
     async function sendMessage() {
         const prompt = userInput.value.trim();
-        if (!prompt) return;
+        if (!prompt || !engine) return;
 
         userInput.value = "";
         appendMessage("user", prompt);
@@ -158,11 +162,10 @@
         const aiBubble = appendMessage("ai", "...");
         let fullText = "";
 
-        // ISTRUZIONI DI PERSONALITA' (System Prompt)
         const messages = [
             { 
                 role: "system", 
-                content: "Sii sintetico, non blaterare. Tu sei un'AI creata da cribest7890 e sviluppata tramite tecnologia Ollama. Ti trovi sul sito freeAI.github.io. Rispondi sempre in italiano in modo diretto e amichevole." 
+                content: "Sii sintetico, non blaterare. Tu sei un'AI creata da cribest7890 e sviluppata tramite tecnologia Ollama. Ti trovi sul sito freeAI.github.io. Rispondi sempre in italiano." 
             },
             { role: "user", content: prompt }
         ];
@@ -171,7 +174,7 @@
             const chunks = await engine.chat.completions.create({
                 messages,
                 stream: true,
-                temperature: 0.4 // Mantiene l'AI seria e sintetica
+                temperature: 0.5
             });
 
             for await (const chunk of chunks) {
@@ -181,7 +184,7 @@
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         } catch (e) {
-            aiBubble.innerText = "Errore durante la generazione. Ricarica la pagina.";
+            aiBubble.innerText = "Errore di memoria GPU. Prova a ricaricare.";
         }
     }
 
